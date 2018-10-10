@@ -91,7 +91,7 @@ public:
 
 	void Get(int* x, int* y); //la x es el numero, la y cuantos elementos hay en una fila
 
-	SDL_Rect Tile_Rect(int tileid);
+	SDL_Rect TileRect(int tileid, int iterator);
 
 	void convert_to_real_world(int*, int*);
 

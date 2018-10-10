@@ -70,30 +70,33 @@ void j1Map::Draw()
 
 
 	//Blit bone
-	 //App->render->Blit(App->player->graphics, data.bone_position.x, data.bone_position.y, 1 , &bone_rect);
+	 App->render->Blit(App->player->graphics, data.bone_position.x, data.bone_position.y, 1 , &bone_rect);
 
 
-	int counter = 0;
-		while (counter < data.layer_array.At(0)->data->height * data.layer_array.At(0)->data->width)
-		{
-			int id = data.layer_array.At(0)->data->data[counter]; //devuelve el tipo de tileset
+	 for (int iterator = 0; iterator < data.layer_array.count(); iterator++)
+	 {
+		 int counter = 0;
+		 while (counter < data.layer_array.At(iterator)->data->height * data.layer_array.At(iterator)->data->width)
+		 {
+			 int id = data.layer_array.At(iterator)->data->data[counter]; //devuelve el tipo de tileset
 
-			if(id != 0)
-			{ 
-				int x = counter;
-				int y = data.layer_array.At(0)->data->width;
-				Get(&x, &y);
+			 if (id != 0)
+			 {
+				 int x = counter;
+				 int y = data.layer_array.At(iterator)->data->width;
+				 Get(&x, &y);
 
-				//X e Y son coordenadas del tileset
+				 //X e Y son coordenadas del tileset
 
-				convert_to_real_world(&x, &y);
+				 convert_to_real_world(&x, &y);
 
-				//Aqui en pixels
-		
-				App->render->Blit(data.tilesets.At(0)->data->texture, x, y, 1, &Tile_Rect(id));
-			}
-			counter++;
-		}
+				 //Aqui en pixels
+
+				 App->render->Blit(data.tilesets.At(0)->data->texture, x, y, 1, &TileRect(id, 0));
+			 }
+			 counter++;
+		 }
+	 }
 }
 
 
@@ -118,22 +121,22 @@ SDL_Rect TileSet::GetTileRect(int id) const
 	return rect;
 }
 
-SDL_Rect j1Map::Tile_Rect(int tileid)
+SDL_Rect j1Map::TileRect(int tileid, int iterator)
 {
 
-	tileid = tileid - data.tilesets.At(0)->data->firstgid;
+	tileid = tileid - data.tilesets.At(iterator)->data->firstgid;
 
-	int row = tileid / data.tilesets.At(0)->data->num_tiles_width;
+	int row = tileid / data.tilesets.At(iterator)->data->num_tiles_width;
 
-	int column = tileid - row*data.tilesets.At(0)->data->num_tiles_width;
+	int column = tileid - row*data.tilesets.At(iterator)->data->num_tiles_width;
 
 	SDL_Rect rect;
-	rect.w = data.tilesets.At(0)->data->tile_width;
-	rect.h = data.tilesets.At(0)->data->tile_height;
+	rect.w = data.tilesets.At(iterator)->data->tile_width;
+	rect.h = data.tilesets.At(iterator)->data->tile_height;
 
-	rect.x = data.tilesets.At(0)->data->margin + (rect.w + data.tilesets.At(0)->data->spacing)*column;
+	rect.x = data.tilesets.At(iterator)->data->margin + (rect.w + data.tilesets.At(iterator)->data->spacing)*column;
 
-	rect.y = data.tilesets.At(0)->data->margin + (rect.h + data.tilesets.At(0)->data->spacing)*row;
+	rect.y = data.tilesets.At(iterator)->data->margin + (rect.h + data.tilesets.At(iterator)->data->spacing)*row;
 
 	return rect;
 }
@@ -234,7 +237,7 @@ bool j1Map::Load(const char* file_name)
 
 	if (ret = true)
 	{
-		//CreateColliders();
+		CreateColliders();
 	}
 
     //Posicion inicial del jugador
