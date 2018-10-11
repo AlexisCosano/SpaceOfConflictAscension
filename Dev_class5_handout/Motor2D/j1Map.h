@@ -8,9 +8,6 @@
 
 struct TileSet
 {
-
-	SDL_Rect GetTileRect(int id) const;
-
 	p2SString			name;
 	int					firstgid;
 	int					margin;
@@ -20,7 +17,7 @@ struct TileSet
 	SDL_Texture*		texture;
 	int					tex_width;
 	int					tex_height;
-	 int					num_tiles_width;
+	int					num_tiles_width;
 	int					num_tiles_height;
 	int					offset_x;
 	int					offset_y;
@@ -33,8 +30,6 @@ struct MapLayer
 	int height;
 	uint* data = nullptr;
 };
-
-
 
 enum MapTypes
 {
@@ -110,6 +105,8 @@ private:
 	bool LoadLayer(pugi::xml_node& node);
 	bool LoadBackground(pugi::xml_node& node);
 	bool LoadMapPropierties(pugi::xml_node& node);
+
+	TileSet* GetTilesetFromTileId(int given_id) const;
 
 public:
 

@@ -91,14 +91,15 @@ void j1Map::Draw()
 				 convert_to_real_world(&x, &y);
 
 				 //Aqui en pixels
-
-				 App->render->Blit(data.tilesets.At(0)->data->texture, x, y, 1, &TileRect(id, 0));
+				 for (int i = 0; i < data.tilesets.count(); i++)
+				 {
+					 App->render->Blit(data.tilesets.At(i)->data->texture, x, y, 1, &TileRect(id, i));
+				 }
 			 }
 			 counter++;
 		 }
 	 }
 }
-
 
 iPoint j1Map::MapToWorld(int x, int y) const
 {
@@ -108,17 +109,6 @@ iPoint j1Map::MapToWorld(int x, int y) const
 	ret.y = y * data.tile_height;
 
 	return ret;
-}
-
-SDL_Rect TileSet::GetTileRect(int id) const
-{
-	int relative_id = id - firstgid;
-	SDL_Rect rect;
-	rect.w = tile_width;
-	rect.h = tile_height;
-	rect.x = margin + ((rect.w + spacing) * (relative_id -  num_tiles_width * (relative_id / num_tiles_width)));
-	rect.y = margin + ((rect.h + spacing) * (relative_id / num_tiles_width));
-	return rect;
 }
 
 SDL_Rect j1Map::TileRect(int tileid, int iterator)
@@ -139,6 +129,24 @@ SDL_Rect j1Map::TileRect(int tileid, int iterator)
 	rect.y = data.tilesets.At(iterator)->data->margin + (rect.h + data.tilesets.At(iterator)->data->spacing)*row;
 
 	return rect;
+}
+
+TileSet* j1Map::GetTilesetFromTileId(int given_id) const
+{
+	TileSet* result = new TileSet;
+
+	for (int i = 0; i < data.tilesets.count(); i++)
+	{
+		result = data.tilesets.At(i)->data;
+
+
+		if (given_id == data.tilesets.At(i)->data->firstgid)
+		{
+			result = data.tilesets.At(i)->data;
+		}
+	}
+
+	return result;
 }
 
 // Called before quitting
@@ -230,7 +238,7 @@ bool j1Map::Load(const char* file_name)
 			MapLayer* l = item_layer->data;
 			LOG("Layer ----");
 			LOG("name: %s", l->name.GetString());
-			LOG("tile width: %d tile height: %d", l->width, l->height);
+			LOG("width: %d height: %d", l->width, l->height);
 			item_layer = item_layer->next;
 		}
 	}
