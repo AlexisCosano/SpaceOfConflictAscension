@@ -191,7 +191,7 @@ bool j1Map::Load(const char* file_name)
 		ret = LoadMap();
 	}
 	LoadBackground(map_file);
-	LoadMapPropierties(map_file);
+	LoadMapProperties(map_file);
 
 	// Load all tilesets info ----------------------------------------------
 	pugi::xml_node tileset;
@@ -396,6 +396,7 @@ bool j1Map::LoadLayer(pugi::xml_node& node)
 		layer_data->height = layer.attribute("height").as_int();
 		layer_data->width = layer.attribute("width").as_int();
 		layer_data->name = layer.attribute("name").as_string();
+		LoadLayerProperties(layer, layer_data->properties);
 
 		layer_data->data = new uint[layer_data->height*layer_data->width];
 
@@ -427,7 +428,7 @@ bool j1Map::LoadBackground(pugi::xml_node& node)
 
 	return true;
 }
-bool j1Map::LoadMapPropierties(pugi::xml_node& node)
+bool j1Map::LoadMapProperties(pugi::xml_node& node)
 {
 	pugi::xml_node iterator = node.child("map").child("properties").child("property");
 	while (iterator != nullptr)
@@ -486,4 +487,57 @@ void j1Map::convert_to_real_world(int* x, int* y)
 	*y = *y * data.tilesets.At(0)->data->tile_width;
 }
 
+bool LayerProperties::GetProperty(pugi::xml_node given_node)
+{
+	return true;
+}
 
+// Load a group of properties from a node and fill a list with it
+bool j1Map::LoadLayerProperties(pugi::xml_node& node, LayerProperties& properties)
+{
+	bool ret = false;	
+
+	for (pugi::xml_node property_child = node.child("properties").first_child(); property_child; property_child = property_child.next_sibling())
+	{
+		ret = true;
+
+		pugi::xml_attribute collider_child = property_child.attribute("name");
+		p2SString testing = collider_child.as_string();
+		
+		if (testing == "Draw")
+		{
+			properties.is_drawn = property_child.attribute("value").as_bool();
+		}
+		
+		else if (testing == "HasColliders")
+		{
+			properties.has_colliders = property_child.attribute("value").as_bool();
+		}
+
+		else
+		{
+			LOG("Error: no properties found.");
+			ret = false;
+		}
+	}
+
+	if (properties.is_drawn == true)
+	{
+		LOG("Draw is true.");
+	}
+	else
+	{
+		LOG("Draw is false.");
+	}
+	
+	if (properties.has_colliders == true)
+	{
+		LOG("HasColliders is true.");
+	}
+	else
+	{
+		LOG("HasColliders is false.");
+	}		
+
+	return ret;
+}
