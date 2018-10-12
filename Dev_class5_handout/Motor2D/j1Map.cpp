@@ -66,11 +66,11 @@ void j1Map::Draw()
 
 
 	//Blit background
-     App->render->Blit(data.background_image, data.background_offset.x - App->player->player_x_displacement * data.parallax_speed, data.background_offset.y);
+    //App->render->Blit(data.background_image, data.background_offset.x - App->player->player_x_displacement * data.parallax_speed, data.background_offset.y);
 
 
 	//Blit bone
-	 App->render->Blit(App->player->graphics, data.bone_position.x, data.bone_position.y, 1 , &bone_rect);
+	 //App->render->Blit(App->player->graphics, data.bone_position.x, data.bone_position.y, 1 , &bone_rect);
 
 
 	 for (int iterator = 0; iterator < data.layer_array.count(); iterator++)

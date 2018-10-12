@@ -17,11 +17,11 @@ public:
 
 	bool Start();
 	bool PostUpdate();
-	
+	bool Update();
 
 	// Load / Save
 	bool Load(pugi::xml_node&);
-	 bool Save(pugi::xml_node&) const;
+	bool Save(pugi::xml_node&) const;
 
 	void WallSlide();
 	void Jump();

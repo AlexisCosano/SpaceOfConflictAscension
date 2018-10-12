@@ -7,7 +7,9 @@
 #include "j1Render.h"
 #include "j1Window.h"
 #include "j1Map.h"
+#include "j1Player.h"
 #include "j1Scene.h"
+
 
 j1Scene::j1Scene() : j1Module()
 {
@@ -32,6 +34,9 @@ bool j1Scene::Start()
 {	
 	App->map->Load("Level1Test.tmx");
 	App->map->map = 0;
+
+	player = App->player;
+	
 
 	return true;
 }
@@ -69,6 +74,8 @@ bool j1Scene::Update(float dt)
 	}
 
 	App->map->Draw();
+	App->render->Blit(player->graphics, player->position.x, player->position.y);
+
 	p2SString title("Map:%dx%d Tiles:%dx%d Tilesets:%d",
 					App->map->data.width, App->map->data.height,
 					App->map->data.tile_width, App->map->data.tile_height,

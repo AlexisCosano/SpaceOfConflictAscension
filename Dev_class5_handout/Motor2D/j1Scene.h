@@ -4,10 +4,13 @@
 #include "j1Module.h"
 
 struct SDL_Texture;
+class j1Player;
 
 class j1Scene : public j1Module
 {
 public:
+
+	j1Player* player;
 
 	j1Scene();
 

@@ -40,36 +40,16 @@ j1Player::j1Player()
 
 	row++;
 
-	// sliding
-	for (int i = 0; i < 10; i++)
-		slide.PushBack({ 1 + sprite_distance.x * i, 1 + sprite_distance.y * row, 547, 481 });
-
-	row++;
-
 	// jumping
 	for (int i = 0; i < 8; i++)
 		jump.PushBack({ 1 + sprite_distance.x * i, 1 + sprite_distance.y * row, 547, 481 });
 
 	jump.loop = false;
 
-	// wall slide left
-
-	wallslideleft.PushBack({ 1 + sprite_distance.x * 8, 1 + sprite_distance.y * row, 547, 481 });
-	wallslideleft.PushBack({ 1 + sprite_distance.x * 9, 1 + sprite_distance.y * row, 547, 481 });
-
-	wallslideleft.speed = 0.01;
-	row++;
-
 	// falling
 	for (int i = 0; i < 7; i++)
 		fall.PushBack({ 1 + sprite_distance.x * i, 1 + sprite_distance.y * row, 547, 481 });
 
-	// wall slide right
-
-	wallslideright.PushBack({ 1 + sprite_distance.x * 8, 1 + sprite_distance.y * row, 547, 481 });
-	wallslideright.PushBack({ 1 + sprite_distance.x * 9, 1 + sprite_distance.y * row, 547, 481 });
-
-	wallslideright.speed = 0.01;
 }
 
 j1Player::~j1Player()
@@ -84,7 +64,12 @@ bool j1Player::Start()
 	bool ret = true;
 
 	//Aqui carga el spritesheet
-	graphics = App->tex->Load("textures/SpriteSheet.png");
+	graphics = App->tex->Load("textures/placeholder.png");
+
+	if (graphics != nullptr)
+	{
+		LOG("Player texture loaded successfully.");
+	}
 
 	SDL_Rect r{ 0, 0, 481, 547 };
 
@@ -124,44 +109,14 @@ bool j1Player::PostUpdate()
 		dead = false;
 	}
 
-	// El deslizamiento
-	if (App->input->GetKey(SDL_SCANCODE_S) == KEY_DOWN && contact.y == 1)
-	{
-		sliding = true;
-	}
+	
 
-	// Moverse para la derecha
-	if (App->input->GetKey(SDL_SCANCODE_D) == KEY_REPEAT && !sliding)
-	{
-		flip = false;
-
-		if (contact.y == 1)
-			current_animation = &run;
-		if (contact.x != 2)
-			speed.x = 1;
-	}
-
-	// Moverse para la izquierda
-	if (App->input->GetKey(SDL_SCANCODE_A) == KEY_REPEAT && !sliding)
-	{
-		flip = true;
-
-		if (contact.y == 1)
-			current_animation = &run;
-		if (contact.x != 1)
-			speed.x = -1;
-	}
-
-	// Saltar
-	if (App->input->GetKey(SDL_SCANCODE_SPACE) == KEY_DOWN && !sliding)
+	// Jump
+	if (App->input->GetKey(SDL_SCANCODE_SPACE) == KEY_DOWN)
 	{
 		if (contact.y == 1)
 		{
 			jumping = true;
-		}
-		else if (contact.x == 1 || contact.x == 2)
-		{
-			walljumping = true;
 		}
 	}
 
@@ -180,32 +135,16 @@ bool j1Player::PostUpdate()
 		position.y = App->map->data.player_starting_value.y - 5;
 	}
 
-	WallSlide();
 	Jump();
-	Slide();
 
-	if (sliding && contact.x != 1 && flip)
-		speed.x = -1.5;
-	else if (sliding && contact.x != 2 && !flip)
-		speed.x = 1.5;
-
-
-	if (!walljumping)
-		position.x += speed.x;
-
-	if (contact.y != 1 && StickToWall)
-		position.y += gravity / 2;
-
-	else if (contact.y != 1)
+	if (contact.y != 1)
 		position.y += gravity;
 
-	StickToWall = false;
 	contact.x = 0;
 	contact.y = 0;
 
 	// Draw everything --------------------------------------
-
-	App->render->Blit(graphics, position.x, position.y, 0.3, &current_animation->GetCurrentFrame(), flip);
+	//App->render->Blit(graphics, position.x, position.y, 0.3, &current_animation->GetCurrentFrame(), flip);
 
 	// Set camera to follow the player
 	App->render->camera.x = -position.x + 400;
@@ -214,34 +153,15 @@ bool j1Player::PostUpdate()
 	//Put collider next to player
 	if (collider != nullptr)
 	{
-		if (!sliding)
-		  collider->SetPos(position.x + 30, position.y + 30);
-		else
-			collider->SetPos(position.x, position.y + 547 * 0.2 - App->map->data.tile_height - 1 + 50);
+		collider->SetPos(position.x, position.y + 547 * 0.2 - App->map->data.tile_height - 1 + 50);
 	}
 
 	return true;
 }
 
-void j1Player::WallSlide()
-{
-	if (contact.x == 2 && contact.y != 1 && contact.y != 2)
-	{
-		StickToWall = true;
-		current_animation = &wallslideright;
-		flip = false;
-	}
-	else if (contact.x == 1 && contact.y != 1 && contact.y != 2)
-	{
-		StickToWall = true;
-		current_animation = &wallslideleft;
-		flip = false;
-	}
-}
-
 void j1Player::Jump()
 {
-	// Salto
+	// Jump
 	if (jumping)
 	{
 		if (allowtime)
@@ -271,83 +191,32 @@ void j1Player::Jump()
 			jump.Reset();
 		}
 	}
-	// Salto de pared
-	else if (walljumping)
-	{
-		if (allowtime)
-		{
-			time = SDL_GetTicks();
-			allowtime = false;
-			jcontact = contact.x;
-			contact.x = 0;
-		}
-
-		if (SDL_GetTicks() - time <= 500 && contact.x == 0)
-		{
-			current_animation = &jump;
-			position.y -= speed.y;
-
-			if (jcontact == 1)
-			{
-				position.x += 1;
-				flip = true;
-			}
-			else if (jcontact == 2)
-				position.x -= 1;
-		}
-		else
-		{
-			walljumping = false;
-			allowtime = true;
-			jump.Reset();
-		}
-
-		if (contact.y == 1 || contact.x == 1 || contact.x == 2)
-		{
-			walljumping = false;
-			allowtime = true;
-			jump.Reset();
-		}
-	}
 }
 
-void j1Player::Slide()
-{	
-	
-	if (sliding)
+bool j1Player::Update()
+{
+	// Move right
+	if (App->input->GetKey(SDL_SCANCODE_D) == KEY_REPEAT)
 	{
-		if (allowtime)
-		{
-			time = SDL_GetTicks();
-			allowtime = false;
-			collider->SetSize(481 * 0.2 + 50, App->map->data.tile_height - 1 -50);
-			player_height_before_sliding = position.y;
-			App->audio->PlayFx(2);
-		}
-		if (SDL_GetTicks() - time <= 200) // Deberia ser suficiente unicamente para pasar por las arease de deslizamiento
-		{
-			current_animation = &slide;
-			rect_after_sliding.x = position.x;
-			rect_after_sliding.y = player_height_before_sliding;
-			rect_after_sliding.h = 547 * 0.2;
-			rect_after_sliding.w = 481 * 0.2;
+		flip = false;
 
-		}
-
-	
-		else if (App->collision->WillCollideAfterSlide(rect_after_sliding , 1) && contact.x == 0)
-		{
-			time = SDL_GetTicks();
-		}
-		else
-		{
-			sliding = false;
-			allowtime = true;
-			collider->SetSize(481 * 0.2, 547 * 0.2);
-			if (contact.y == 1)
-			position.y = player_height_before_sliding - 3;
-		}
+		if (contact.y == 1)
+			current_animation = &run;
+		if (contact.x != 2)
+			speed.x = 1;
 	}
+
+	// Move left
+	if (App->input->GetKey(SDL_SCANCODE_A) == KEY_REPEAT)
+	{
+		flip = true;
+
+		if (contact.y == 1)
+			current_animation = &run;
+		if (contact.x != 1)
+			speed.x = -1;
+	}
+	return true;
 }
 
 bool j1Player::Load(pugi::xml_node& data)

@@ -30,14 +30,14 @@ j1App::j1App(int argc, char* args[]) : argc(argc), args(args)
 	collision = new j1Collisions();
 	player = new j1Player();
 
-	 AddModule(input);
+	AddModule(input);
 	AddModule(win);
 	AddModule(tex);
 	AddModule(audio);
 	AddModule(map);
-	AddModule(player);
-	AddModule(scene);
 	AddModule(collision);
+	AddModule(scene);
+	AddModule(player);
 
 	AddModule(render);
 }
