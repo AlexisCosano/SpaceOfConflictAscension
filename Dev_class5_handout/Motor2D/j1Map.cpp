@@ -91,9 +91,12 @@ void j1Map::Draw()
 				 convert_to_real_world(&x, &y);
 
 				 //Aqui en pixels
-				 for (int i = 0; i < data.tilesets.count(); i++)
+				 if (data.layer_array.At(iterator)->data->properties.is_drawn == true)
 				 {
-					 App->render->Blit(data.tilesets.At(i)->data->texture, x, y, 1, &TileRect(id, i));
+					 for (int i = 0; i < data.tilesets.count(); i++)
+					 {
+						 App->render->Blit(data.tilesets.At(i)->data->texture, x, y, 1, &TileRect(id, i));
+					 }
 				 }
 			 }
 			 counter++;
@@ -487,11 +490,6 @@ void j1Map::convert_to_real_world(int* x, int* y)
 	*y = *y * data.tilesets.At(0)->data->tile_width;
 }
 
-bool LayerProperties::GetProperty(pugi::xml_node given_node)
-{
-	return true;
-}
-
 // Load a group of properties from a node and fill a list with it
 bool j1Map::LoadLayerProperties(pugi::xml_node& node, LayerProperties& properties)
 {
@@ -500,16 +498,15 @@ bool j1Map::LoadLayerProperties(pugi::xml_node& node, LayerProperties& propertie
 	for (pugi::xml_node property_child = node.child("properties").first_child(); property_child; property_child = property_child.next_sibling())
 	{
 		ret = true;
-
 		pugi::xml_attribute collider_child = property_child.attribute("name");
-		p2SString testing = collider_child.as_string();
+		p2SString string = collider_child.as_string();
 		
-		if (testing == "Draw")
+		if (string == "Draw")
 		{
 			properties.is_drawn = property_child.attribute("value").as_bool();
 		}
 		
-		else if (testing == "HasColliders")
+		else if (string == "HasColliders")
 		{
 			properties.has_colliders = property_child.attribute("value").as_bool();
 		}
@@ -521,6 +518,7 @@ bool j1Map::LoadLayerProperties(pugi::xml_node& node, LayerProperties& propertie
 		}
 	}
 
+	LOG("Layer '%s' metadata ===================", node.attribute("name").as_string());
 	if (properties.is_drawn == true)
 	{
 		LOG("Draw is true.");

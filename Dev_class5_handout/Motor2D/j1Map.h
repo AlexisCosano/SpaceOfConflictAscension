@@ -10,8 +10,6 @@ struct LayerProperties
 {
 	bool is_drawn = false;
 	bool has_colliders = false;
-
-	bool GetProperty(pugi::xml_node given_node);
 };
 
 struct TileSet
