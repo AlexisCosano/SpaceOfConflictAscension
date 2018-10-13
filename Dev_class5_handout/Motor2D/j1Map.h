@@ -14,6 +14,8 @@ struct LayerProperties
 
 struct TileSet
 {
+	SDL_Rect GetTileRect(int id) const;
+
 	p2SString			name;
 	int					firstgid;
 	int					margin;
@@ -85,7 +87,7 @@ public:
 	bool CleanUp();
 
 	//Called to create colliders
-	void CreateColliders();
+
 
 	// Load new map
 	bool Load(const char* path);
@@ -115,11 +117,17 @@ private:
 	bool LoadMapProperties(pugi::xml_node& node);
 	bool LoadLayerProperties(pugi::xml_node& node, LayerProperties& properties);
 
+	void FindColliders(MapLayer* layer);
+	void FindSpawn(MapLayer* layer);
+	void FindDeath(MapLayer* layer);
+	void FindVictory(MapLayer* layer);
+
 	TileSet* GetTilesetFromTileId(int given_id) const;
 
 public:
 
 	MapData data;
+	iPoint spawn_point;
 
 private:
 

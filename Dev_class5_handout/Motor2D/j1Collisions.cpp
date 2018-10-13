@@ -1,279 +1,74 @@
+#include "p2Defs.h"
+#include "p2Log.h"
 #include "j1App.h"
-#include "j1Input.h"
 #include "j1Render.h"
+#include "j1Textures.h"
 #include "j1Collisions.h"
-#include "j1Player.h"
-#include "j1Map.h"
 
-j1Collisions::j1Collisions()
+j1Colliders::j1Colliders()
 {
-	for (uint i = 0; i < MAX_COLLIDERS; ++i)
-		colliders[i] = nullptr;
-
-	matrix[COLLIDER_BONE][COLLIDER_BONE] = false;
-	matrix[COLLIDER_BONE][COLLIDER_DEADLY] = false;
-	matrix[COLLIDER_BONE][COLLIDER_PLAYER] = true;
-
-	 matrix[COLLIDER_PLAYER][COLLIDER_PLAYER] = false;
-	matrix[COLLIDER_PLAYER][COLLIDER_BONE] = true;
-	matrix[COLLIDER_PLAYER][COLLIDER_DEADLY] = true;
-
-	matrix[COLLIDER_DEADLY][COLLIDER_DEADLY] = false;
-	matrix[COLLIDER_DEADLY][COLLIDER_BONE] = false;
-	matrix[COLLIDER_DEADLY][COLLIDER_PLAYER] = true;
 }
 
-// Destructor
-j1Collisions::~j1Collisions()
-{}
-
-
-
-bool j1Collisions::PreUpdate()
+j1Colliders::~j1Colliders()
 {
-	// Quita los coliders
-	for (uint i = 0; i < MAX_COLLIDERS; ++i)
-	{
-		if (colliders[i] != nullptr && colliders[i]->to_delete == true)
-		{
-			delete colliders[i];
-			colliders[i] = nullptr;
-		}
-	}
+}
 
+bool j1Colliders::Awake(pugi::xml_node &)
+{
 	return true;
 }
 
-// Llama al rtender antes de que este disponible
-bool j1Collisions::Update(float dt)
+bool j1Colliders::Start()
 {
-	Collider* c;
-
-	for (uint i = 0; i < MAX_COLLIDERS; ++i)
-	{
-			// Salta los colliders vacios y de jugador
-			if (colliders[i] == nullptr || colliders[i]->type == COLLIDER_NONE || colliders[i]->type == COLLIDER_PLAYER)
-				continue;
-
-			if (colliders[i]->type == COLLIDER_BONE || colliders[i]->type == COLLIDER_DEADLY)
-			{
-				c = colliders[i];
-
-				if (App->player->collider->CheckCollision(c->rect) == true)
-				{
-
-					if (matrix[App->player->collider->type][c->type])
-					{
-						if (c->type == COLLIDER_DEADLY)
-						{
-							App->player->dead = true;
-						}
-						else if (c->type == COLLIDER_BONE)
-						{
-							if(App->map->map == 0)
-							{ 
-								//App->map->Load("Level 2 final"); //Mapa 2 no hecho
-								App->map->map = 1;
-							}
-							if (App->map->map == 1)
-							{
-								// Ganas si llegas hasta aqui
-							}
-						}
-					}
-
-				}
-			}
-			else if (colliders[i]->type == COLLIDER_GROUND && App->player->collider->rect.y + App->player->collider->rect.h > colliders[i]->rect.y)
-			{
-				colliders[i]->type = COLLIDER_WALL;
-			}
-			else if (colliders[i]->type == COLLIDER_WALL && App->player->collider->rect.y + App->player->collider->rect.h < colliders[i]->rect.y + colliders[i]->rect.h && App->player->collider->rect.y + App->player->collider->rect.h < colliders[i]->rect.y)
-			{
-				colliders[i]->type = COLLIDER_GROUND;
-			}
-			
-			if (colliders[i]->type == COLLIDER_GROUND && colliders[i]->WillCollideGround(App->player->collider->rect, 1))
-				App->player->contact.y = 1;
-
-			if (colliders[i]->type == COLLIDER_WALL && colliders[i]->WillCollideTop(App->player->collider->rect, 1))
-				App->player->contact.y = 2;
-			
-			if (colliders[i]->type == COLLIDER_WALL && colliders[i]->WillCollideLeft(App->player->collider->rect, 1))
-				App->player->contact.x = 1;
-
-			if (colliders[i]->type == COLLIDER_WALL && colliders[i]->WillCollideRight(App->player->collider->rect, 1))
-				App->player->contact.x = 2;
-	}
-
-	DebugDraw();
-
 	return true;
 }
 
-void j1Collisions::DebugDraw()
+bool j1Colliders::PreUpdate()
 {
-	if (App->input->GetKey(SDL_SCANCODE_F9) == KEY_DOWN)
-		debug = !debug;
-
-	if (debug == false)
-		return;
-
-	Uint8 alpha = 80;
-	for (uint i = 0; i < MAX_COLLIDERS; ++i)
-	{
-		if (colliders[i] == nullptr)
-			continue;
-
-		switch (colliders[i]->type)
-		{
-		case COLLIDER_NONE: // blanco
-			App->render->DrawQuad(colliders[i]->rect, 255, 255, 255, alpha, false);
-			break;
-		case COLLIDER_PLAYER: // cian
-			App->render->DrawQuad(colliders[i]->rect, 0, 255, 255, alpha, false);
-			break;
-		case COLLIDER_WALL: // verde
-			App->render->DrawQuad(colliders[i]->rect, 0, 255, 0, alpha, false);
-			break;
-		case COLLIDER_GROUND: // azul
-			App->render->DrawQuad(colliders[i]->rect, 0, 0, 255, alpha, false);
-			break;
-		case COLLIDER_DEADLY: // rojo
-			App->render->DrawQuad(colliders[i]->rect, 255, 0, 0, alpha, true);
-			break;
-		case COLLIDER_BONE: 
-			App->render->DrawQuad(colliders[i]->rect, 255, 255, 255, alpha, true);
-			break;
-		}
-	}
-}
-
-// Llama antes de quitar
-bool j1Collisions::CleanUp()
-{
-	LOG("Freeing all colliders");
-
-	for (uint i = 0; i < MAX_COLLIDERS; ++i)
-	{
-		if (colliders[i] != nullptr)
-		{
-			delete colliders[i];
-			colliders[i] = nullptr;
-		}
-	}
-
 	return true;
 }
 
-Collider* j1Collisions::AddCollider(SDL_Rect rect, COLLIDER_TYPE type)
+bool j1Colliders::CleanUp()
 {
-	Collider* ret = nullptr;
-
-	for (uint i = 0; i < MAX_COLLIDERS; ++i)
-	{
-		if (colliders[i] == nullptr)
-		{
-			ret = colliders[i] = new Collider(rect, type);
-			break;
-		}
-	}
-
-	return ret;
+	return true;
 }
 
-void j1Collisions::Erase_Non_Player_Colliders()
+bool j1Colliders::CheckCollision(SDL_Rect r1, SDL_Rect r2) const
 {
-	for (uint i = 0; i < MAX_COLLIDERS; ++i)
-	{
-		if (colliders[i] != nullptr && colliders[i]->type != COLLIDER_PLAYER)
-		{
-			delete colliders[i];
-			colliders[i] = nullptr;
-		}
-	}
+	return (r1.x < r2.x + r2.w &&
+		r1.x + r1.w > r2.x &&
+		r1.y < r2.y + r2.h &&
+		r1.h + r1.y > r2.y);
 }
 
-// -----------------------------------------------------
-
-bool Collider::CheckCollision(const SDL_Rect& r) const
+void j1Colliders::AddColliders(SDL_Rect collider)
 {
-	if (r.y + r.h > rect.y && r.y < rect.y + rect.h && r.x + r.w > rect.x && r.x < rect.x + rect.w)
-	{
-		return true;
-	}
-
-	else
-	{
-		return false;
-	}
+	colliders.add(collider);
 }
 
-bool Collider::WillCollideLeft(const SDL_Rect& r, int distance) const
+void j1Colliders::AddDeath(SDL_Rect death)
 {
-	if (r.y + r.h > rect.y && r.y < rect.y + rect.h && r.x < rect.x + rect.w + distance && r.x + r.w > rect.x)
-	{
-		return true;
-	}
-
-	else
-	{
-		return false;
-	}
+	death_triggers.add(death);
 }
 
-bool Collider::WillCollideRight(const SDL_Rect& r, int distance) const
+void j1Colliders::AddVictory(SDL_Rect victory)
 {
-	if (r.y + r.h > rect.y && r.y < rect.y + rect.h && r.x + r.w > rect.x - distance && r.x < rect.x + rect.w)
-	{
-		return true;
-	}
-
-	else
-	{
-		return false;
-	}
+	victory_triggers.add(victory);
 }
 
-bool Collider::WillCollideGround(const SDL_Rect& r, int distance) const
+bool j1Colliders::Save(pugi::xml_node &)
 {
-	if (r.y < rect.y + rect.h && r.y + r.h > rect.y - distance && r.x + r.w > rect.x && r.x < rect.x + rect.w)
-	{
-		return true;
-	}
-
-	else
-	{
-		return false;
-	}
+	return true;
 }
 
-bool Collider::WillCollideTop(const SDL_Rect& r, int distance) const
+bool j1Colliders::Load(pugi::xml_node &)
 {
-	if (r.y + r.h > rect.y && r.y < rect.y + rect.h + distance && r.x + r.w > rect.x && r.x < rect.x + rect.w)
-	{
-		return true;
-	}
-
-	else
-	{
-		return false;
-	}
+	return true;
 }
 
-bool j1Collisions::WillCollideAfterSlide(const SDL_Rect& r, int distance) const
+void j1Colliders::UnloadAllColliders()
 {
-	for (uint i = 0; i < MAX_COLLIDERS; ++i)
-	{
-		// Salta los colliders vacios y del jugador
-		if (colliders[i] == nullptr || colliders[i]->type == COLLIDER_NONE || colliders[i]->type == COLLIDER_PLAYER)
-			continue;
-
-		if (colliders[i]->type == COLLIDER_WALL && colliders[i]->WillCollideTop(r, distance))
-		{
-			return true;
-		}
-	}
-
-	return false;
+	colliders.clear();
+	death_triggers.clear();
+	victory_triggers.clear();
 }

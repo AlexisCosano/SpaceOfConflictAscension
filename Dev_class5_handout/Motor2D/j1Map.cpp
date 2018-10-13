@@ -29,34 +29,119 @@ bool j1Map::Awake(pugi::xml_node& config)
 	return ret;
 }
 
-void j1Map::CreateColliders()
+SDL_Rect TileSet::GetTileRect(int id) const
+{
+	int relative_id = id - firstgid;
+	SDL_Rect rect;
+	rect.w = tile_width;
+	rect.h = tile_height;
+	rect.x = margin + ((rect.w + spacing) * (relative_id % num_tiles_width));
+	rect.y = margin + ((rect.h + spacing) * (relative_id / num_tiles_width));
+	return rect;
+}
+
+void j1Map::FindColliders(MapLayer* layer)
 {
 	int counter = 0;
-	
-	    App->collision->AddCollider({data.bone_position.x, data.bone_position.y,bone_rect.w, bone_rect.h }, COLLIDER_BONE);
+	while (counter < layer->height * layer->width)
+	{
+		int id = layer->data[counter]; //devuelve el tipo de tileset
 
-		while (counter < data.layer_array.At(1)->data->height*data.layer_array.At(1)->data->width)
+		if (id > 0)
 		{
-			int id = data.layer_array.At(1)->data->data[counter]; //devuelve el tipo de tileset
-			int x = counter; 
-			int y = data.layer_array.At(1)->data->width;
-			Get(&x, &y); 
+			int x = counter;
+			int y = layer->width;
+			Get(&x, &y);
 
-			//X e Y son las coordenadas del tileset
-			
-			convert_to_real_world(&x, &y);
+			TileSet* tileset = data.tilesets.start->data;
 
-			//Ahora estan en pixels
-			if(id == 11)
-			{ 
-				App->collision->AddCollider({ x,y,data.tilesets.At(0)->data->tile_width, data.tilesets.At(0)->data->tile_height }, COLLIDER_WALL);
-			}
-			if (id == 12)
-			{
-				App->collision->AddCollider({ x,y,data.tilesets.At(0)->data->tile_width, data.tilesets.At(0)->data->tile_height }, COLLIDER_DEADLY);
-			}
-			counter++;
+			SDL_Rect r = tileset->GetTileRect(id);
+			iPoint pos = MapToWorld(x, y);
+
+			r.x = pos.x;
+			r.y = pos.y;
+
+			App->collision->AddColliders(r);
 		}
+		counter++;
+	}
+}
+
+void j1Map::FindDeath(MapLayer* layer)
+{
+	int counter = 0;
+	while (counter < layer->height * layer->width)
+	{
+		int id = layer->data[counter]; //devuelve el tipo de tileset
+
+		if (id > 0)
+		{
+			int x = counter;
+			int y = layer->width;
+			Get(&x, &y);
+
+			TileSet* tileset = data.tilesets.start->data;
+
+			SDL_Rect r = tileset->GetTileRect(id);
+			iPoint pos = MapToWorld(x, y);
+
+			r.x = pos.x;
+			r.y = pos.y;
+
+			App->collision->AddDeath(r);
+		}
+		counter++;
+	}
+}
+
+void j1Map::FindVictory(MapLayer* layer)
+{
+	int counter = 0;
+	while (counter < layer->height * layer->width)
+	{
+		int id = layer->data[counter]; //devuelve el tipo de tileset
+
+		if (id > 0)
+		{
+			int x = counter;
+			int y = layer->width;
+			Get(&x, &y);
+
+			TileSet* tileset = data.tilesets.start->data;
+
+			SDL_Rect r = tileset->GetTileRect(id);
+			iPoint pos = MapToWorld(x, y);
+
+			r.x = pos.x;
+			r.y = pos.y;
+
+			App->collision->AddVictory(r);
+		}
+		counter++;
+	}
+}
+
+void j1Map::FindSpawn(MapLayer* layer)
+{
+	int counter = 0;
+	while (counter < layer->height * layer->width)
+	{
+		int id = layer->data[counter]; //devuelve el tipo de tileset
+
+		if (id > 0)
+		{
+			int x = counter;
+			int y = layer->width;
+			Get(&x, &y);
+
+			TileSet* tileset = data.tilesets.start->data;
+
+			iPoint pos = MapToWorld(x, y);
+
+			spawn_point = pos;
+		}
+		counter++;
+	}
 }
 
 void j1Map::Draw()
@@ -246,10 +331,7 @@ bool j1Map::Load(const char* file_name)
 		}
 	}
 
-	if (ret = true)
-	{
-		CreateColliders();
-	}
+
 
     //Posicion inicial del jugador
 	App->player->position.x = data.player_starting_value.x;
@@ -412,6 +494,27 @@ bool j1Map::LoadLayer(pugi::xml_node& node)
 			layer_data->data[i] = tile_.attribute("gid").as_uint();
 			tile_ = tile_.next_sibling("tile");
 			i++;
+		}
+
+		if (layer_data->name == "SpawnPoint")
+		{
+			FindSpawn(layer_data);
+			LOG("Spawn found.");
+		}
+
+		if (layer_data->name == "NoWalkable")
+		{
+			FindColliders(layer_data);
+		}
+
+		if (layer_data->name == "Death")
+		{
+			FindDeath(layer_data);
+		}
+
+		if (layer_data->name == "Win")
+		{
+			FindVictory(layer_data);
 		}
 
 		data.layer_array.add(layer_data);

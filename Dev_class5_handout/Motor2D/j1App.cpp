@@ -27,7 +27,7 @@ j1App::j1App(int argc, char* args[]) : argc(argc), args(args)
 	audio = new j1Audio();
 	scene = new j1Scene();
 	map = new j1Map();
-	collision = new j1Collisions();
+	collision = new j1Colliders();
 	player = new j1Player();
 
 	AddModule(input);

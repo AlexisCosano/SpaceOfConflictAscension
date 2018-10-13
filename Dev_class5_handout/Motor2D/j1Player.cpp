@@ -1,239 +1,245 @@
+#include "p2Defs.h"
+#include "p2Log.h"
+#include "j1Player.h"
 #include "j1App.h"
 #include "j1Textures.h"
-#include "j1Input.h"
 #include "j1Render.h"
-#include "j1Player.h"
+#include "j1Input.h"
+#include "j1Scene.h"
+#include "j1Collisions.h"
 #include "j1Map.h"
-#include "p2Log.h"
-#include "j1Audio.h"
 
 
-j1Player::j1Player()
+j1Player::j1Player() : j1Module()
 {
 	name.create("player");
-	position.x = 0;
-	position.y = 0;
-	int row = 0;
 
-	//Aqui pon la distancia de las X y de la Y
+	position.SetToZero();
 
-	sprite_distance.x = 548;
-	sprite_distance.y = 482;
+	speed.x = 1;
+	speed.y = 1;
 
-	// dying
-	 for (int i = 0; i < 10; i++)
-		death.PushBack({ 1 + sprite_distance.x * i, 1 + sprite_distance.y * row, 547, 481 });
+	dash_distance = 370.f;
+	current_dash_distance = 0.f;
 
-	death.loop = false;
-	row++;
+	gravity.x = 0;
+	gravity.y = 2;
 
-	// idle animation
-	for (int i = 0; i < 10; i++)
-		idle.PushBack({ 1 + sprite_distance.x * i, 1 + sprite_distance.y * row, 547, 481 });
+	player_rect = { 0, 0, 16, 27 };
 
-	idle.speed = 0.06;
-	row++;
+	direction = 1; // 1 - right, -1 - left
 
-	// running
-	for (int i = 0; i < 8; i++)
-		run.PushBack({ 1 + sprite_distance.x * i, 1 + sprite_distance.y * row, 547, 481 });
-
-	row++;
-
-	// jumping
-	for (int i = 0; i < 8; i++)
-		jump.PushBack({ 1 + sprite_distance.x * i, 1 + sprite_distance.y * row, 547, 481 });
-
-	jump.loop = false;
-
-	// falling
-	for (int i = 0; i < 7; i++)
-		fall.PushBack({ 1 + sprite_distance.x * i, 1 + sprite_distance.y * row, 547, 481 });
-
+	jumping = false;
+	dashing = false;
+	jump_force = 1;
+	jump_distance = 70.f;
+	current_jump_distance = 0.f;
 }
 
+// Destructor ---------------------------------
 j1Player::~j1Player()
 {
-	App->tex->UnLoad(graphics);
 }
 
-// Load assets
-bool j1Player::Start()
+// Called before render is available ----------
+bool j1Player::Awake(pugi::xml_node&)
 {
-	LOG("Loading player textures");
+	LOG("Init player");
+	bool ret = true;
+	current_map = 1;
+	LOG(" INITIAL Position = (%i, %i)", position.x, position.y);
+	return ret;
+}
+
+// Update ------------------------------------
+bool j1Player::Update(float dt)
+{
 	bool ret = true;
 
-	//Aqui carga el spritesheet
-	graphics = App->tex->Load("textures/placeholder.png");
+	player_rect.x = position.x;
+	player_rect.y = position.y;
 
-	if (graphics != nullptr)
+	// Player Controls
+	if (App->input->GetKey(SDL_SCANCODE_A) == KEY_REPEAT)
 	{
-		LOG("Player texture loaded successfully.");
+		player_rect.x -= 1 * speed.x;
+		if (CheckCollisions() == false)
+		{
+			position.x = player_rect.x;
+		}
+		else
+		{
+			player_rect.x = position.x;
+		}
+		direction = -1;
 	}
 
-	SDL_Rect r{ 0, 0, 481, 547 };
+	if (App->input->GetKey(SDL_SCANCODE_D) == KEY_REPEAT)
+	{
+		player_rect.x += 1 * speed.x;
+		if (CheckCollisions() == false)
+		{
+			position.x = player_rect.x;
+		}
+		else
+		{
+			player_rect.x = position.x;
+		}
+		direction = 1;
+	}
 
-	SDL_Rect ground{ r.x + 1000, r.y + 900, r.w, 100 };
+	if (App->input->GetKey(SDL_SCANCODE_SPACE) == KEY_DOWN)
+	{
+		jumping = true;
+	}
 
-	SDL_Rect collider_rect{ 0, 0, r.w * 0.2, r.h * 0.2 };
+	if (jumping)
+	{
+		player_rect.y -= jump_force;
+		if (CheckCollisions() == false)
+		{
+			position.y = player_rect.y;
+		}
+		else
+		{
+			player_rect.y = position.y;
+		}
+		if (jump_distance <= current_jump_distance)
+		{
+			current_jump_distance = 0.f;
+			jumping = false;
+		}
+		else
+		{
+			current_jump_distance += jump_force;
+		}
+	}
+	else
+	{
+		player_rect.y += gravity.y;
+		if (CheckCollisions() == false)
+		{
+			position.y = player_rect.y;
+		}
+		else
+		{
+			player_rect.y = position.y;
+		}
+	}
 
-	contact.x = 0;
-	contact.y = 0;
-
-	collider = App->collision->AddCollider(collider_rect, COLLIDER_PLAYER);
-
-	gravity = 1;
+	if (CheckDeath() == true)
+	{
+		position = App->map->spawn_point;
+	}
 
 	return ret;
 }
 
-// Update: draw background
-bool j1Player::PostUpdate()
+// Set texture
+void j1Player::SetTexture(SDL_Texture* texture)
 {
-	player_x_displacement = App->map->data.player_starting_value.x - position.x;
+	this->texture = texture;
 
-	if (contact.y == 1)
-		current_animation = &idle;
-	else
-		current_animation = &fall;
+	int w, h;
+	SDL_QueryTexture(texture, NULL, NULL, &w, &h);
 
-	speed.x = 0;
-	speed.y = 2;
+	player_rect.h = 16;
+	player_rect.w = 27;
+}
 
-	if (dead)
-	{
-		position.x = App->map->data.player_starting_value.x;
-		position.y = App->map->data.player_starting_value.y - 5;
-
-		
-		dead = false;
-	}
-
-	
-
-	// Jump
-	if (App->input->GetKey(SDL_SCANCODE_SPACE) == KEY_DOWN)
-	{
-		if (contact.y == 1)
-		{
-			jumping = true;
-		}
-	}
-
-	if (App->input->GetKey(SDL_SCANCODE_F1) == KEY_DOWN)
-	{
-		if(App->map->map != 0)
-		{ 
-		   App->map->Load("Level1Test.tmx");
-		}
-		position.x = App->map->data.player_starting_value.x;
-		position.y = App->map->data.player_starting_value.y - 5;
-	}
-	if (App->input->GetKey(SDL_SCANCODE_F2) == KEY_DOWN)
-	{
-		position.x = App->map->data.player_starting_value.x;
-		position.y = App->map->data.player_starting_value.y - 5;
-	}
-
-	Jump();
-
-	if (contact.y != 1)
-		position.y += gravity;
-
-	contact.x = 0;
-	contact.y = 0;
-
-	// Draw everything --------------------------------------
-	//App->render->Blit(graphics, position.x, position.y, 0.3, &current_animation->GetCurrentFrame(), flip);
-
-	// Set camera to follow the player
-	App->render->camera.x = -position.x + 400;
-	App->render->camera.y = -position.y + 400;
-
-	//Put collider next to player
-	if (collider != nullptr)
-	{
-		collider->SetPos(position.x, position.y + 547 * 0.2 - App->map->data.tile_height - 1 + 50);
-	}
+// Called before quitting --------------------
+bool j1Player::CleanUp()
+{
+	LOG("Destroying player");
 
 	return true;
 }
 
-void j1Player::Jump()
+// Collisions
+bool j1Player::CheckCollisions()
 {
-	// Jump
-	if (jumping)
+	bool ret = false;
+	p2List_item<SDL_Rect>* item = App->collision->colliders.start;
+
+	for (item; item != App->collision->colliders.end; item = item->next)
 	{
-		if (allowtime)
-		{
-			time = SDL_GetTicks();
-			allowtime = false;
-			contact.y = 0;
-			App->audio->PlayFx(1);
-		}
-
-		if (SDL_GetTicks() - time <= 400 && contact.y == 0)
-		{
-			current_animation = &jump;
-			position.y -= speed.y;
-		}
-		else
-		{
-			jumping = false;
-			allowtime = true;
-			jump.Reset();
-		}
-
-		if (contact.y == 1 && (contact.x == 1 || contact.x == 2))
-		{
-			jumping = false;
-			allowtime = true;
-			jump.Reset();
-		}
+		ret = App->collision->CheckCollision(player_rect, item->data);
+		if (ret)
+			return ret;
 	}
+
+	return ret;
 }
 
-bool j1Player::Update()
+// Death
+bool j1Player::CheckDeath()
 {
-	// Move right
-	if (App->input->GetKey(SDL_SCANCODE_D) == KEY_REPEAT)
-	{
-		flip = false;
+	bool ret = false;
+	p2List_item<SDL_Rect>* item = App->collision->death_triggers.start;
 
-		if (contact.y == 1)
-			current_animation = &run;
-		if (contact.x != 2)
-			speed.x = 1;
+	for (item; item != App->collision->death_triggers.end; item = item->next)
+	{
+		ret = App->collision->CheckCollision(player_rect, item->data);
+		if (ret)
+			return ret;
 	}
 
-	// Move left
-	if (App->input->GetKey(SDL_SCANCODE_A) == KEY_REPEAT)
-	{
-		flip = true;
-
-		if (contact.y == 1)
-			current_animation = &run;
-		if (contact.x != 1)
-			speed.x = -1;
-	}
-	return true;
+	return ret;
 }
 
-bool j1Player::Load(pugi::xml_node& data)
+// Victory
+bool j1Player::CheckVictory()
 {
-	position.x = data.child("player_position").attribute("x").as_float();
-	position.y = data.child("player_position").attribute("y").as_float() -3;
+	bool ret = false;
+	p2List_item<SDL_Rect>* item = App->collision->victory_triggers.start;
+
+	for (item; item != App->collision->victory_triggers.end; item = item->next)
+	{
+		ret = App->collision->CheckCollision(player_rect, item->data);
+		if (ret)
+			return ret;
+	}
+
+	return ret;
+}
+
+// Save & Load ------------------------------
+bool j1Player::Save(pugi::xml_node& node)
+{
+	bool ret = true;
+
+	SavePlayerState(node);
 
 	return true;
 }
 
-// Save Game State
-bool j1Player::Save(pugi::xml_node& data) const
+bool j1Player::Load(pugi::xml_node& node)
 {
-	pugi::xml_node player = data.append_child("player_position");
+	bool ret = true;
 
-	player.append_attribute("x") = position.x;
-	player.append_attribute("y") = position.y;
+	LoadState(node);
 
 	return true;
+}
+
+bool j1Player::LoadState(pugi::xml_node& node)
+{
+	bool ret = true;
+
+	position.x = node.child("position").attribute("positionx").as_int();
+	position.y = node.child("position").attribute("positiony").as_int();
+
+	return true;
+}
+
+bool j1Player::SavePlayerState(pugi::xml_node& node)
+{
+	bool ret = true;
+
+	pugi::xml_node player_node = node.append_child("position");
+
+	player_node.append_attribute("positionx").set_value(position.x);
+	player_node.append_attribute("positiony").set_value(position.y);
+
+	return ret;
 }
